@@ -70,6 +70,15 @@ jobs:
           echo "Checking iOS manifest dependencies..."
           grep -n -A8 -B2 'fluidsynth' vcpkg.json
 
+      - name: Clear target vcpkg build state
+        shell: bash
+        run: |
+          rm -rf "${{ steps.root.outputs.root }}/build/ios-device"
+          rm -rf "${{ steps.root.outputs.root }}/vcpkg_installed"
+          rm -rf "${VCPKG_ROOT}/buildtrees/fluidsynth" || true
+          echo "Using overlay ports:"
+          find "${{ steps.root.outputs.root }}/vcpkg-overlays/ports" -maxdepth 2 -type f -print
+
       - name: Configure iOS device build
         working-directory: ${{ steps.root.outputs.root }}
         run: cmake --preset ios-device
