@@ -1,52 +1,80 @@
 name: Build unsigned IPA
+
 on:
-  workflow_dispatch:
   push:
-    branches: [ main ]
+    branches:
+      - main
+  workflow_dispatch:
+
 jobs:
   build:
     runs-on: macos-15
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Locate project
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Find Xcode project
+        shell: bash
         run: |
-          PROJECT=$(find . -name "GymCalorieV9.xcodeproj" -print -quit)
+          set -euo pipefail
+
+          PROJECT="$(find "$GITHUB_WORKSPACE" -maxdepth 3 -name 'GymCalorieV9.xcodeproj' -print -quit)"
+
+          if [ -z "$PROJECT" ]; then
+            echo "ERROR: GymCalorieV9.xcodeproj not found"
+            find "$GITHUB_WORKSPACE" -maxdepth 3 -print
+            exit 1
+          fi
+
           echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
           echo "Project: $PROJECT"
-- name: Package IPA
-  shell: bash
-  run: |
-    set -euxo pipefail
 
-    rm -rf build/Payload
-    mkdir -p build/Payload
+      - name: Build unsigned
+        shell: bash
+        run: |
+          set -euo pipefail
 
-    APP="$(find "$GITHUB_WORKSPACE/build/DerivedData/Build/Products" \
-      -type d \
-      -name "GymCalorieV9.app" \
-      -print -quit)"
+          rm -rf "$GITHUB_WORKSPACE/build"
 
-    if [ -z "$APP" ]; then
-      echo "ERROR: Không tìm thấy GymCalorieV9.app"
-      find "$GITHUB_WORKSPACE/build/DerivedData/Build/Products" \
-        -maxdepth 3 -print || true
-      exit 1
-    fi
+          xcodebuild             -project "$PROJECT"             -scheme GymCalorieV9             -configuration ProjectDebug             -sdk iphoneos             -derivedDataPath "$GITHUB_WORKSPACE/build/DerivedData"             CODE_SIGNING_ALLOWED=NO             CODE_SIGNING_REQUIRED=NO             CODE_SIGN_IDENTITY=""             DEVELOPMENT_TEAM=""             build
 
-    echo "FOUND APP:"
-    echo "$APP"
+      - name: Find built app
+        shell: bash
+        run: |
+          set -euo pipefail
 
-    cp -R "$APP" build/Payload/GymCalorieV9.app
+          APP="$(find "$GITHUB_WORKSPACE/build/DerivedData/Build/Products"             -type d             -name 'GymCalorieV9.app'             -print -quit)"
 
-    cd build
-    zip -qry GymCalorieV9-unsigned.ipa Payload
+          if [ -z "$APP" ]; then
+            echo "ERROR: GymCalorieV9.app not found"
+            find "$GITHUB_WORKSPACE/build/DerivedData/Build/Products"               -maxdepth 4 -print || true
+            exit 1
+          fi
 
-    echo "IPA CREATED:"
-    ls -lh GymCalorieV9-unsigned.ipa
-          cp -R build/DerivedData/Build/Products/Release-iphoneos/GymCalorieV9.app build/Payload/
-          cd build
-          zip -qry GymCalorieV9-unsigned.ipa Payload
-      - uses: actions/upload-artifact@v4
+          echo "APP_PATH=$APP" >> "$GITHUB_ENV"
+          echo "Found app: $APP"
+
+      - name: Package IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rm -rf "$GITHUB_WORKSPACE/build/Payload"
+          mkdir -p "$GITHUB_WORKSPACE/build/Payload"
+
+          cp -R "$APP_PATH"             "$GITHUB_WORKSPACE/build/Payload/GymCalorieV9.app"
+
+          cd "$GITHUB_WORKSPACE/build"
+
+          /usr/bin/zip -qry             GymCalorieV9-unsigned.ipa             Payload
+
+          test -f GymCalorieV9-unsigned.ipa
+          ls -lh GymCalorieV9-unsigned.ipa
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
         with:
           name: GymCalorieV9-unsigned-ipa
           path: build/GymCalorieV9-unsigned.ipa
+          if-no-files-found: error
