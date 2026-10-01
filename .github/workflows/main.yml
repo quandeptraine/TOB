@@ -8,14 +8,20 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+      - name: Locate project
+        run: |
+          PROJECT=$(find . -name "GymCalorieV9.xcodeproj" -print -quit)
+          echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
+          echo "Project: $PROJECT"
       - name: Build unsigned
         run: |
-          xcodebuild -project GymCalorieV9.xcodeproj -scheme GymCalorieV9 -configuration Release -sdk iphoneos -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM=""
+          xcodebuild -project "$PROJECT" -scheme GymCalorieV9 -configuration Release -sdk iphoneos             -derivedDataPath build/DerivedData             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM=""
       - name: Package IPA
         run: |
           mkdir -p build/Payload
           cp -R build/DerivedData/Build/Products/Release-iphoneos/GymCalorieV9.app build/Payload/
-          cd build && zip -qry GymCalorieV9-unsigned.ipa Payload
+          cd build
+          zip -qry GymCalorieV9-unsigned.ipa Payload
       - uses: actions/upload-artifact@v4
         with:
           name: GymCalorieV9-unsigned-ipa
