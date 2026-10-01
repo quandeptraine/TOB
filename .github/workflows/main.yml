@@ -13,12 +13,36 @@ jobs:
           PROJECT=$(find . -name "GymCalorieV9.xcodeproj" -print -quit)
           echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
           echo "Project: $PROJECT"
-      - name: Build unsigned
-        run: |
-          xcodebuild -project "$PROJECT" -scheme GymCalorieV9 -configuration Release -sdk iphoneos             -derivedDataPath build/DerivedData             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM=""
-      - name: Package IPA
-        run: |
-          mkdir -p build/Payload
+- name: Package IPA
+  shell: bash
+  run: |
+    set -euxo pipefail
+
+    rm -rf build/Payload
+    mkdir -p build/Payload
+
+    APP="$(find "$GITHUB_WORKSPACE/build/DerivedData/Build/Products" \
+      -type d \
+      -name "GymCalorieV9.app" \
+      -print -quit)"
+
+    if [ -z "$APP" ]; then
+      echo "ERROR: Không tìm thấy GymCalorieV9.app"
+      find "$GITHUB_WORKSPACE/build/DerivedData/Build/Products" \
+        -maxdepth 3 -print || true
+      exit 1
+    fi
+
+    echo "FOUND APP:"
+    echo "$APP"
+
+    cp -R "$APP" build/Payload/GymCalorieV9.app
+
+    cd build
+    zip -qry GymCalorieV9-unsigned.ipa Payload
+
+    echo "IPA CREATED:"
+    ls -lh GymCalorieV9-unsigned.ipa
           cp -R build/DerivedData/Build/Products/Release-iphoneos/GymCalorieV9.app build/Payload/
           cd build
           zip -qry GymCalorieV9-unsigned.ipa Payload
