@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<plist version="1.0"><dict>
-<key>CFBundleDisplayName</key><string>GymCalorie</string>
-<key>CFBundleShortVersionString</key><string>1.0.0</string>
-<key>CFBundleVersion</key><string>1</string>
-<key>NSHealthShareUsageDescription</key><string>GymCalorie dùng dữ liệu sức khỏe để hiển thị hoạt động và tiến độ tập luyện.</string>
-<key>NSHealthUpdateUsageDescription</key><string>GymCalorie có thể ghi workout và hoạt động khi bạn cho phép.</string>
-</dict></plist>
